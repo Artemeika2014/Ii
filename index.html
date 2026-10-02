@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Тряска</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0e17;
+    --bg-soft: #131826;
+    --card: #1a2030;
+    --card-2: #232a3d;
+    --border: #2a3245;
+    --text: #eef1f7;
+    --text-dim: #8b95ad;
+    --accent: #5b8dff;
+    --accent-2: #7b5cff;
+    --ok: #22c98b;
+    --warn: #ffb84d;
+    --err: #ff5c6c;
+  }
+  * { box-sizing: border-box; font-family: 'Google Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; -webkit-font-smoothing: antialiased; }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+  .content { flex: 1; overflow-y: auto; padding: 20px; }
+  .center { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; min-height: 100%; }
+  h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 8px; }
+  h3 { font-size: 15px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--text-dim); margin: 0 0 10px; }
+  .hint { color: var(--text-dim); font-size: 14.5px; line-height: 1.5; max-width: 340px; }
+
+  .tabs {
+    display: flex; border-top: 1px solid var(--border);
+    background: rgba(11,14,23,.9); backdrop-filter: blur(12px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tabs button {
+    flex: 1; padding: 16px 8px 14px; background: none; border: none;
+    color: var(--text-dim); font-size: 13px; font-weight: 600; letter-spacing: .02em;
+    cursor: pointer; transition: color .15s; position: relative;
+  }
+  .tabs button.active { color: var(--accent); }
+  .tabs button.active::after {
+    content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 32px; height: 3px; border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+
+  button.primary, button.secondary, button.ghost {
+    border: none; border-radius: 14px; font-size: 15px; font-weight: 600;
+    padding: 14px 22px; cursor: pointer; transition: transform .08s, filter .15s;
+    letter-spacing: .01em;
+  }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; box-shadow: 0 8px 24px -8px var(--accent);
+  }
+  button.primary:active { transform: scale(.97); }
+  button.primary:disabled { opacity: .5; cursor: default; }
+  button.secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  button.secondary:active { transform: scale(.97); }
+  button.link { background: none; border: none; color: var(--accent); cursor: pointer; padding: 10px; font-size: 14px; font-weight: 600; }
+  button.danger {
+    background: var(--err); color: #fff; border: none;
+    padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+
+  input {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 15px 16px; color: var(--text); font-size: 15px;
+    width: 100%; max-width: 340px; outline: none; transition: border-color .15s, background .15s;
+    font-family: inherit;
+  }
+  input:focus { border-color: var(--accent); background: var(--card-2); }
+  input::placeholder { color: var(--text-dim); }
+
+  /* Range slider */
+  input[type="range"] {
+    padding: 0; background: transparent; border: none; height: 6px; max-width: none;
+  }
+  input[type="range"]::-webkit-slider-runnable-track {
+    height: 6px; border-radius: 3px; background: var(--card-2);
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px; margin-top: -8px;
+    border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 4px 10px -4px var(--accent); cursor: pointer;
+  }
+  input[type="range"]::-moz-range-track {
+    height: 6px; border-radius: 3px; background: var(--card-2);
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px; height: 22px; border: none;
+    border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    cursor: pointer;
+  }
+
+  .sensor-block {
+    position: sticky; top: 0; z-index: 5;
+    width: 100%; max-width: 480px; margin: 0 auto 18px;
+  }
+  .sensor-btn {
+    width: 100%; padding: 15px; border: none; border-radius: 14px;
+    font-size: 14.5px; font-weight: 700; letter-spacing: .01em;
+    cursor: pointer; transition: filter .15s, transform .08s;
+    background: linear-gradient(135deg, #ffb84d, #ff8f3d);
+    color: #1a1a1a; box-shadow: 0 8px 22px -10px #ff8f3d;
+  }
+  .sensor-btn.active {
+    background: linear-gradient(135deg, #22c98b, #18a978);
+    color: #fff; box-shadow: 0 8px 22px -10px #22c98b;
+  }
+  .sensor-btn:active { transform: scale(.98); }
+  .sensor-status {
+    margin-top: 8px; font-size: 12.5px; font-weight: 500;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 9px 12px;
+    display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  }
+  .sensor-status .ok { color: var(--ok); font-weight: 600; }
+  .sensor-status .wait { color: var(--warn); font-weight: 600; }
+  .sensor-status .bad { color: var(--err); font-weight: 600; }
+
+  .search-area {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 18px; margin: 30px 0;
+  }
+  .radar {
+    position: relative; width: 180px; height: 180px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .radar .core {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 0 30px -4px var(--accent), 0 0 60px -10px var(--accent-2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; z-index: 2;
+  }
+  .radar .wave {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid var(--accent);
+    opacity: 0; animation: wave 3s ease-out infinite;
+  }
+  .radar .wave:nth-child(2) { animation-delay: .75s; }
+  .radar .wave:nth-child(3) { animation-delay: 1.5s; }
+  .radar .wave:nth-child(4) { animation-delay: 2.25s; }
+  @keyframes wave {
+    0%   { transform: scale(.45); opacity: .9; border-color: var(--accent); }
+    70%  { opacity: .15; }
+    100% { transform: scale(1.4);  opacity: 0; border-color: var(--accent-2); }
+  }
+  .countdown {
+    font-size: 15px; font-weight: 600; color: var(--text-dim);
+    letter-spacing: .02em;
+  }
+  .countdown b { color: var(--text); font-weight: 700; font-size: 17px; }
+
+  .matches { width: 100%; max-width: 480px; margin: 8px auto 0; text-align: left; }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; margin-bottom: 8px; gap: 10px;
+    transition: background .15s;
+  }
+  .row span.name { font-weight: 600; font-size: 15px; }
+  .row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  button.accept {
+    background: var(--ok); color: #fff; border: none;
+    border-radius: 10px; padding: 9px 16px; cursor: pointer;
+    font-weight: 700; font-size: 14px;
+  }
+  button.decline {
+    background: var(--err); color: #fff; border: none;
+    border-radius: 10px; padding: 9px 16px; cursor: pointer;
+    font-weight: 700; font-size: 14px;
+  }
+  button.trash {
+    background: transparent; border: none; font-size: 20px; cursor: pointer;
+    color: var(--err); padding: 4px 8px; border-radius: 8px;
+  }
+
+  .subtabs {
+    display: flex; gap: 8px; margin: 14px 0 18px;
+    flex-wrap: wrap; justify-content: center;
+  }
+  .subtabs button {
+    background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+    padding: 9px 16px; border-radius: 999px; cursor: pointer;
+    font-size: 13.5px; font-weight: 600; transition: all .15s;
+  }
+  .subtabs button.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; border-color: transparent;
+    box-shadow: 0 6px 18px -8px var(--accent);
+  }
+
+  .stack { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 480px; margin: 0 auto; align-items: stretch; }
+  .login-title { text-align: center; font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+  .error { color: var(--err); font-size: 13.5px; text-align: center; font-weight: 500; }
+  .info { color: var(--accent); font-size: 13.5px; text-align: center; font-weight: 500; }
+  .muted { color: var(--text-dim); font-size: 14px; text-align: center; padding: 24px 0; }
+
+  /* Sensitivity panel */
+  .sensitivity-panel {
+    max-width: 480px; margin: 8px auto 20px; padding: 16px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  }
+  .sens-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .sens-sub { font-size: 12.5px; color: var(--text-dim); margin-bottom: 14px; }
+  .sens-value { font-size: 13px; color: var(--text-dim); margin-top: 10px; text-align: center; }
+
+  /* Live meter */
+  .meter-wrap {
+    margin-top: 14px;
+  }
+  .meter-label {
+    display: flex; justify-content: space-between; font-size: 12px;
+    color: var(--text-dim); margin-bottom: 6px;
+  }
+  .meter-bar {
+    position: relative; height: 12px; border-radius: 6px;
+    background: var(--card-2); overflow: hidden;
+  }
+  .meter-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #22c98b, #ffb84d 60%, #ff5c6c);
+    border-radius: 6px; transition: width .08s linear;
+  }
+  .meter-threshold {
+    position: absolute; top: -3px; bottom: -3px; width: 2px;
+    background: #fff; opacity: .8; border-radius: 1px;
+  }
+
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    display: flex; align-items: flex-end; justify-content: center; z-index: 100;
+    backdrop-filter: blur(4px); animation: fade .2s ease;
+  }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    width: 100%; max-width: 520px; height: 92vh;
+    background: var(--bg-soft); border-radius: 22px 22px 0 0;
+    display: flex; flex-direction: column;
+    border-top: 1px solid var(--border);
+    animation: slideUp .25s cubic-bezier(.2,.9,.3,1);
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 18px; border-bottom: 1px solid var(--border);
+    font-weight: 700; font-size: 16px;
+  }
+  .messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .bubble {
+    padding: 11px 15px; border-radius: 18px; max-width: 78%;
+    word-break: break-word; font-size: 15px; line-height: 1.35;
+  }
+  .bubble.in { background: var(--card-2); align-self: flex-start; border-bottom-left-radius: 6px; }
+  .bubble.out {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; align-self: flex-end; border-bottom-right-radius: 6px;
+  }
+  .composer {
+    display: flex; gap: 8px; padding: 12px 14px;
+    border-top: 1px solid var(--border);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    background: var(--bg-soft);
+  }
+  .composer input { flex: 1; max-width: none; border-radius: 999px; padding: 13px 18px; }
+  .composer button {
+    padding: 13px 20px; border-radius: 999px; border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 8px 20px -8px var(--accent);
+  }
+
+  .loader {
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh; color: var(--text-dim); font-size: 14px; font-weight: 500;
+  }
+
+  .tab-title {
+    text-align: center; font-size: 28px; font-weight: 800;
+    letter-spacing: -.03em; margin: 0 0 4px;
+    background: linear-gradient(135deg, #fff, #b9c4dd);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+</style>
+</head>
+<body>
+<div id="app"><div class="loader">Загрузка…</div></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, doc, setDoc, getDoc, updateDoc, deleteDoc,
+  collection, addDoc, getDocs, query, where, orderBy, onSnapshot,
+  arrayUnion, arrayRemove, writeBatch
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ============ FIREBASE ============ */
+const firebaseConfig = {
+  apiKey: "AIzaSyA0svKzEZteuFlnPtnGLjztr4Uy0Z_i7As",
+  authDomain: "tryasom.firebaseapp.com",
+  projectId: "tryasom",
+  storageBucket: "tryasom.firebasestorage.app",
+  messagingSenderId: "853978256376",
+  appId: "1:853978256376:web:97042be59f4145e4b23c0d"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ============ ПАРОЛЬ (в UI не показывается) ============ */
+const PASSWORD = "6767";
+
+/* ============ LOCAL STORAGE ============ */
+const LS_UID = "tryaska_uid";
+const LS_SENSOR = "tryaska_sensor_enabled";
+const LS_THRESHOLD = "tryaska_sensor_threshold";
+const ls = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch {} },
+  del: (k) => { try { localStorage.removeItem(k); } catch {} },
+};
+
+/* ============ КРИПТО ЧАТА ============ */
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+const CHAT_SALT = "tryaska-chat-salt-please-change";
+
+async function getChatKey(uidA, uidB) {
+  const ids = [uidA, uidB].sort().join(":");
+  const material = await crypto.subtle.importKey(
+    "raw", enc.encode(ids + ":" + CHAT_SALT), "PBKDF2", false, ["deriveKey"]
+  );
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: enc.encode(CHAT_SALT), iterations: 100000, hash: "SHA-256" },
+    material,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]
+  );
+}
+const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function encryptText(text, uidA, uidB) {
+  const key = await getChatKey(uidA, uidB);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(text));
+  return { cipher: b64(ct), iv: b64(iv) };
+}
+async function decryptText(cipher, iv, uidA, uidB) {
+  const key = await getChatKey(uidA, uidB);
+  const pt = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: unb64(iv) }, key, unb64(cipher)
+  );
+  return dec.decode(pt);
+}
+
+/* ============ UID ============ */
+function makeUid() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  const arr = crypto.getRandomValues(new Uint8Array(20));
+  for (const n of arr) s += chars[n % chars.length];
+  return s;
+}
+
+/* ============ СОСТОЯНИЕ ============ */
+const SEARCH_DURATION_MS = 30000;
+
+const state = {
+  ready: false,
+  uid: null,
+  me: null,
+  tab: "shake",
+  sub: "add",
+  authMode: null,
+  matches: [],
+  requests: [],
+  chatWith: null,
+  messages: [],
+  searching: false,
+  searchEndsAt: 0,
+  searchTimer: null,
+  sensorEnabled: ls.get(LS_SENSOR) === "1",
+  sensorThreshold: Number(ls.get(LS_THRESHOLD)) || 45,
+  sensorLive: false,
+  sensorLastEvent: 0,
+  sensorAcc: { x: 0, y: 0, z: 0 },
+  currentSpeed: 0,       // для живой шкалы
+  unsubs: [],
+};
+const root = document.getElementById("app");
+
+function clearSubs() {
+  state.unsubs.forEach((u) => { try { u(); } catch (e) {} });
+  state.unsubs = [];
+}
+
+/* ============ DOM ============ */
+function h(tag, attrs = {}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") el.className = v;
+    else if (k === "style") el.style.cssText = v;
+    else if (k === "onclick") el.onclick = v;
+    else if (k === "oninput") el.oninput = v;
+    else if (k === "onkeydown") el.onkeydown = v;
+    else el.setAttribute(k, v);
+  }
+  children.flat().forEach((c) => {
+    if (c == null || c === false) return;
+    el.appendChild(typeof c === "string" || typeof c === "number"
+      ? document.createTextNode(String(c)) : c);
+  });
+  return el;
+}
+const chatIdFor = (a, b) => [a, b].sort().join("_");
+
+/* ============ РЕГИСТРАЦИЯ / ВХОД ============ */
+async function doRegister(login, password, setError) {
+  try {
+    const l = login.trim();
+    if (l.length < 3) throw new Error("Логин минимум 3 символа");
+    if (password !== PASSWORD) throw new Error("Неверный пароль");
+
+    const s = await getDocs(query(collection(db, "users"), where("login", "==", l)));
+    if (!s.empty) throw new Error("Логин занят");
+
+    const uid = makeUid();
+    await setDoc(doc(db, "users", uid), {
+      login: l, tryaska: false, friends: [], createdAt: Date.now(),
+    });
+    ls.set(LS_UID, uid);
+    await loginByUid(uid);
+  } catch (e) { setError(e.message); }
+}
+
+async function doLogin(login, password, setError) {
+  try {
+    if (password !== PASSWORD) throw new Error("Неверный пароль");
+    const s = await getDocs(query(collection(db, "users"),
+      where("login", "==", login.trim())));
+    if (s.empty) throw new Error("Пользователь не найден");
+    const uid = s.docs[0].id;
+    ls.set(LS_UID, uid);
+    await loginByUid(uid);
+  } catch (e) { setError(e.message); }
+}
+
+async function loginByUid(uid) {
+  clearSubs();
+  state.uid = uid;
+  const s = await getDoc(doc(db, "users", uid));
+  if (!s.exists()) {
+    ls.del(LS_UID);
+    state.uid = null;
+    render();
+    return;
+  }
+  state.me = { ...s.data(), uid };
+
+  state.unsubs.push(onSnapshot(doc(db, "users", uid), (snap) => {
+    if (!snap.exists()) return;
+    state.me = { ...snap.data(), uid };
+    render();
+  }));
+
+  state.unsubs.push(onSnapshot(collection(db, "users", uid, "requests"), (snap) => {
+    const list = [];
+    snap.forEach((d) => list.push({ uid: d.id, ...d.data() }));
+    list.sort((a, b) => b.createdAt - a.createdAt);
+    state.requests = list;
+    render();
+  }));
+
+  state.unsubs.push(onSnapshot(
+    query(collection(db, "users"), where("tryaska", "==", true)),
+    (snap) => {
+      if (!state.me) return;
+      const list = [];
+      snap.forEach((d) => {
+        if (d.id === state.me.uid) return;
+        const data = d.data();
+        if ((state.me.friends || []).includes(d.id)) {
+          list.push({ uid: d.id, login: data.login });
+        }
+      });
+      state.matches = list;
+      render();
+    }
+  ));
+
+  render();
+}
+
+async function doLogout() {
+  await stopSearch();
+  clearSubs();
+  ls.del(LS_UID);
+  state.uid = null;
+  state.me = null;
+  state.matches = [];
+  state.requests = [];
+  state.chatWith = null;
+  state.messages = [];
+  state.authMode = null;
+  state.sub = "add";
+  render();
+}
+
+/* ============ ПОИСК (30 сек) ============ */
+async function startSearch() {
+  if (!state.me || state.searching) return;
+  state.searching = true;
+  state.searchEndsAt = Date.now() + SEARCH_DURATION_MS;
+  await updateDoc(doc(db, "users", state.me.uid), { tryaska: true });
+
+  state.searchTimer = setInterval(() => {
+    if (Date.now() >= state.searchEndsAt) stopSearch();
+    else if (state.tab === "shake") render();
+  }, 500);
+  render();
+}
+
+async function stopSearch() {
+  if (state.searchTimer) {
+    clearInterval(state.searchTimer);
+    state.searchTimer = null;
+  }
+  const was = state.searching;
+  state.searching = false;
+  state.searchEndsAt = 0;
+  if (state.me) {
+    try { await updateDoc(doc(db, "users", state.me.uid), { tryaska: false }); }
+    catch (e) { console.warn(e); }
+  }
+  if (was) render();
+}
+
+/* ============ ДЕЙСТВИЯ ============ */
+async function addFriend(login, setMsg) {
+  try {
+    const l = login.trim();
+    if (!l) throw new Error("Введи логин");
+    if (l === state.me.login) throw new Error("Это ты :)");
+    const s = await getDocs(query(collection(db, "users"), where("login", "==", l)));
+    if (s.empty) throw new Error("Пользователь не найден");
+    const friendDoc = s.docs[0];
+    if ((state.me.friends || []).includes(friendDoc.id)) throw new Error("Уже в друзьях");
+    await setDoc(
+      doc(db, "users", friendDoc.id, "requests", state.me.uid),
+      { login: state.me.login, createdAt: Date.now() }
+    );
+    setMsg(`Заявка отправлена → ${l}`);
+  } catch (e) { setMsg(e.message); }
+}
+async function acceptRequest(fromUid) {
+  await updateDoc(doc(db, "users", state.me.uid), { friends: arrayUnion(fromUid) });
+  await updateDoc(doc(db, "users", fromUid), { friends: arrayUnion(state.me.uid) });
+  await deleteDoc(doc(db, "users", state.me.uid, "requests", fromUid));
+}
+async function declineRequest(fromUid) {
+  await deleteDoc(doc(db, "users", state.me.uid, "requests", fromUid));
+}
+async function removeFriend(friendUid) {
+  if (!confirm("Удалить друга? Переписка будет удалена.")) return;
+  const chatId = chatIdFor(state.me.uid, friendUid);
+  const msgs = await getDocs(collection(db, "chats", chatId, "messages"));
+  const batch = writeBatch(db);
+  msgs.forEach((m) => batch.delete(m.ref));
+  await batch.commit();
+  await updateDoc(doc(db, "users", state.me.uid), { friends: arrayRemove(friendUid) });
+  await updateDoc(doc(db, "users", friendUid), { friends: arrayRemove(state.me.uid) });
+}
+
+/* ============ ЧАТ ============ */
+async function acceptMatch(other) {
+  await stopSearch();
+  state.chatWith = other;
+  state.messages = [];
+  const chatId = chatIdFor(state.me.uid, other.uid);
+  state.unsubs.push(onSnapshot(
+    query(collection(db, "chats", chatId, "messages"), orderBy("createdAt", "asc")),
+    async (snap) => {
+      const out = [];
+      for (const d of snap.docs) {
+        const data = d.data();
+        let plain = "🔒";
+        try { plain = await decryptText(data.cipher, data.iv, state.me.uid, other.uid); }
+        catch { plain = "[ошибка расшифровки]"; }
+        out.push({ id: d.id, ...data, plain });
+      }
+      state.messages = out;
+      render();
+      setTimeout(() => {
+        const box = document.querySelector(".messages");
+        if (box) box.scrollTop = box.scrollHeight;
+      }, 30);
+    }
+  ));
+  render();
+}
+function closeChat() {
+  state.chatWith = null;
+  state.messages = [];
+  render();
+}
+async function sendMessage(text) {
+  const t = text.trim();
+  if (!t || !state.chatWith) return;
+  const { cipher, iv } = await encryptText(t, state.me.uid, state.chatWith.uid);
+  const chatId = chatIdFor(state.me.uid, state.chatWith.uid);
+  await addDoc(collection(db, "chats", chatId, "messages"), {
+    from: state.me.uid, to: state.chatWith.uid,
+    cipher, iv, createdAt: Date.now(),
+  });
+}
+async function finishChat() {
+  if (!state.chatWith) return;
+  if (!confirm("Завершить чат? Все сообщения будут удалены.")) return;
+  const chatId = chatIdFor(state.me.uid, state.chatWith.uid);
+  const snap = await getDocs(collection(db, "chats", chatId, "messages"));
+  for (const d of snap.docs) await deleteDoc(d.ref);
+  closeChat();
+}
+
+/* ============ ДАТЧИК ============ */
+let shakeLast = { x: 0, y: 0, z: 0, t: 0, cool: 0 };
+
+const SHAKE_HITS_REQUIRED = 3;
+const SHAKE_WINDOW_MS = 2000;
+const SHAKE_COOLDOWN_MS = 3000;
+
+let shakeHits = [];
+
+function motionHandler(e) {
+  const acc = e.accelerationIncludingGravity;
+  if (!acc) return;
+  state.sensorLive = true;
+  state.sensorLastEvent = Date.now();
+  state.sensorAcc = {
+    x: +(acc.x || 0).toFixed(2),
+    y: +(acc.y || 0).toFixed(2),
+    z: +(acc.z || 0).toFixed(2),
+  };
+
+  const now = Date.now();
+  if (now - shakeLast.t < 80) return;
+  const dt = now - shakeLast.t || 80;
+  shakeLast.t = now;
+
+  const { x = 0, y = 0, z = 0 } = acc;
+  const speed = (Math.abs(x + y + z - shakeLast.x - shakeLast.y - shakeLast.z) / dt) * 1000;
+
+  shakeLast.x = x; shakeLast.y = y; shakeLast.z = z;
+
+  // сохраняем для живой шкалы
+  state.currentSpeed = speed;
+
+  if (speed < state.sensorThreshold) return;
+
+  shakeHits = shakeHits.filter((t) => now - t < SHAKE_WINDOW_MS);
+  shakeHits.push(now);
+
+  if (
+    shakeHits.length >= SHAKE_HITS_REQUIRED &&
+    !state.searching &&
+    now - shakeLast.cool > SHAKE_COOLDOWN_MS
+  ) {
+    shakeLast.cool = now;
+    shakeHits = [];
+    startSearch();
+  }
+}
+
+setInterval(() => {
+  if (!state.sensorEnabled) return;
+  const wasLive = state.sensorLive;
+  state.sensorLive = Date.now() - state.sensorLastEvent < 1500;
+  if (wasLive !== state.sensorLive && state.tab === "shake" && !state.searching) render();
+}, 1000);
+
+// Живое обновление xyz на вкладке "Трясем"
+setInterval(() => {
+  if (state.tab === "shake" && state.sensorEnabled) {
+    const el = document.getElementById("sensor-xyz");
+    if (el) {
+      el.textContent = `x: ${state.sensorAcc.x}  y: ${state.sensorAcc.y}  z: ${state.sensorAcc.z}`;
+    }
+  }
+}, 200);
+
+// Живое обновление шкалы в профиле
+setInterval(() => {
+  if (state.tab === "profile") {
+    const fill = document.getElementById("meter-fill");
+    const num = document.getElementById("meter-number");
+    if (fill) {
+      // Нормализуем к 150 как "100%"
+      const pct = Math.min(100, (state.currentSpeed / 150) * 100);
+      fill.style.width = pct + "%";
+    }
+    if (num) {
+      num.textContent = Math.round(state.currentSpeed);
+    }
+  }
+}, 100);
+
+async function ensureSensorListener() {
+  if (typeof DeviceMotionEvent === "undefined") return;
+
+  if (typeof DeviceMotionEvent.requestPermission === "function") {
+    if (state.sensorEnabled) {
+      window.removeEventListener("devicemotion", motionHandler);
+      window.addEventListener("devicemotion", motionHandler);
+    }
+    return;
+  }
+
+  window.removeEventListener("devicemotion", motionHandler);
+  window.addEventListener("devicemotion", motionHandler);
+  state.sensorEnabled = true;
+  ls.set(LS_SENSOR, "1");
+}
+
+async function requestSensors() {
+  try {
+    if (typeof DeviceMotionEvent === "undefined") {
+      alert("Это устройство/браузер не поддерживает датчик движения.\n\n" +
+            "Открой страницу на телефоне в Chrome или Safari (по HTTPS).");
+      return;
+    }
+    if (typeof DeviceMotionEvent.requestPermission === "function") {
+      const res = await DeviceMotionEvent.requestPermission();
+      if (res !== "granted") {
+        alert("Разрешение на датчики отклонено. Нажми кнопку ещё раз и разреши доступ.");
+        return;
+      }
+    }
+    await ensureSensorListener();
+
+    state.sensorEnabled = true;
+    ls.set(LS_SENSOR, "1");
+    render();
+
+    setTimeout(() => {
+      if (!state.sensorLive) {
+        alert("Разрешение выдано, но данные с датчика не поступают.\n\n" +
+              "Возможные причины:\n" +
+              "• Страница не по HTTPS\n" +
+              "• Устройство без акселерометра (ПК, ноутбук)\n" +
+              "• В браузере отключены датчики");
+      }
+    }, 1500);
+  } catch (e) {
+    alert("Ошибка доступа к датчикам: " + e.message);
+  }
+}
+
+/* ============ РЕНДЕР ============ */
+function render() {
+  root.innerHTML = "";
+  if (!state.ready) {
+    root.appendChild(h("div", { class: "loader" }, "Загрузка…"));
+    return;
+  }
+
+  const content = h("div", { class: "content" });
+  if (state.tab === "shake") content.appendChild(renderShake());
+  else content.appendChild(renderProfile());
+
+  root.appendChild(content);
+
+  const tabs = h("nav", { class: "tabs" },
+    tabButton("shake", "Трясем"),
+    tabButton("profile", "Профиль")
+  );
+  root.appendChild(tabs);
+
+  if (state.chatWith) root.appendChild(renderChat());
+}
+
+function tabButton(id, label) {
+  const b = h("button", { class: state.tab === id ? "active" : "" }, label);
+  b.onclick = async () => {
+    state.tab = id;
+    if (id === "shake") await ensureSensorListener();
+    render();
+  };
+  return b;
+}
+function subTabButton(id, label) {
+  const b = h("button", { class: state.sub === id ? "active" : "" }, label);
+  b.onclick = () => { state.sub = id; render(); };
+  return b;
+}
+
+/* ---------- Вкладка «Трясем» ---------- */
+function renderShake() {
+  const wrap = h("div", { class: "center" });
+
+  if (!state.searching) {
+    const sensorBlock = h("div", { class: "sensor-block" });
+    const sensorBtn = h("button", {
+      class: "sensor-btn" + (state.sensorEnabled ? " active" : "")
+    }, state.sensorEnabled
+        ? "✅ Датчики разрешены (нажми для проверки)"
+        : "Разрешить использовать датчики");
+    sensorBtn.onclick = requestSensors;
+    sensorBlock.appendChild(sensorBtn);
+
+    let statusText, statusClass;
+    if (!state.sensorEnabled) { statusText = "Датчик не активирован"; statusClass = "wait"; }
+    else if (state.sensorLive) { statusText = "Данные идут ✅"; statusClass = "ok"; }
+    else { statusText = "Разрешено, но данных нет"; statusClass = "bad"; }
+
+    sensorBlock.appendChild(h("div", { class: "sensor-status" },
+      h("span", {}, "Статус:"),
+      h("span", { class: statusClass }, statusText)
+    ));
+
+    if (state.sensorEnabled) {
+      sensorBlock.appendChild(h("div", {
+        class: "sensor-status", id: "sensor-xyz"
+      }, `x: ${state.sensorAcc.x}  y: ${state.sensorAcc.y}  z: ${state.sensorAcc.z}`));
+    }
+    wrap.appendChild(sensorBlock);
+  }
+
+  if (!state.me) {
+    wrap.appendChild(h("div", { class: "tab-title" }, "📳 Тряска"));
+    wrap.appendChild(h("p", { class: "hint" }, "Сначала зарегистрируйтесь, а потом пробуйте."));
+    const b = h("button", { class: "primary" }, "Перейти в профиль");
+    b.onclick = () => { state.tab = "profile"; render(); };
+    wrap.appendChild(b);
+    return wrap;
+  }
+
+  if (state.searching) {
+    const secondsLeft = Math.max(0, Math.ceil((state.searchEndsAt - Date.now()) / 1000));
+
+    const radar = h("div", { class: "radar" },
+      h("div", { class: "core" }, "📳"),
+      h("div", { class: "wave" }),
+      h("div", { class: "wave" }),
+      h("div", { class: "wave" }),
+      h("div", { class: "wave" })
+    );
+
+    const countdown = h("div", { class: "countdown" },
+      "Поиск друзей… ", h("b", {}, secondsLeft + " сек"));
+
+    const stopBtn = h("button", { class: "danger" }, "Завершить поиск");
+    stopBtn.onclick = stopSearch;
+
+    wrap.appendChild(h("div", { class: "search-area" }, radar, countdown, stopBtn));
+
+    if (state.matches.length > 0) {
+      const block = h("div", { class: "matches" }, h("h3", {}, "Трясут прямо сейчас:"));
+      state.matches.forEach((m) => {
+        const accept = h("button", { class: "accept" }, "Принять");
+        accept.onclick = () => acceptMatch(m);
+        block.appendChild(h("div", { class: "row" },
+          h("span", { class: "name" }, "👤 " + m.login),
+          h("div", { class: "row-actions" }, accept)
+        ));
+      });
+      wrap.appendChild(block);
+    }
+
+    setTimeout(() => { if (state.searching && state.tab === "shake") render(); }, 1000);
+    return wrap;
+  }
+
+  wrap.appendChild(h("div", { class: "tab-title" }, "Трясем"));
+  wrap.appendChild(h("p", { class: "hint" },
+    state.sensorLive
+      ? "Тряхни телефон один раз — начнётся поиск друзей на 30 секунд"
+      : "Разреши датчики и тряхни телефон, чтобы найти друзей"
+  ));
+
+  if (state.matches.length > 0) {
+    const block = h("div", { class: "matches" }, h("h3", {}, "Трясут прямо сейчас:"));
+    state.matches.forEach((m) => {
+      const accept = h("button", { class: "accept" }, "Принять");
+      accept.onclick = () => acceptMatch(m);
+      block.appendChild(h("div", { class: "row" },
+        h("span", { class: "name" }, "👤 " + m.login),
+        h("div", { class: "row-actions" }, accept)
+      ));
+    });
+    wrap.appendChild(block);
+  }
+
+  return wrap;
+}
+
+/* ---------- Вкладка «Профиль» ---------- */
+function renderProfile() {
+  if (!state.me) return renderAuth();
+
+  const wrap = h("div", {});
+  wrap.appendChild(h("h2", { class: "login-title" }, "👤 " + state.me.login));
+
+  const logout = h("button", { class: "link" }, "Выйти");
+  logout.onclick = doLogout;
+  wrap.appendChild(h("div", { style: "text-align:center;" }, logout));
+
+  /* -------- Панель чувствительности + живая шкала -------- */
+  const panel = h("div", { class: "sensitivity-panel" });
+
+  panel.appendChild(h("div", { class: "sens-title" }, "Чувствительность тряски"));
+  panel.appendChild(h("div", { class: "sens-sub" },
+    "Чем выше — тем сильнее надо тряхнуть телефон, чтобы запустить поиск"));
+
+  const slider = h("input", {
+    type: "range",
+    min: "15",
+    max: "100",
+    step: "1",
+    value: String(state.sensorThreshold)
+  });
+  slider.oninput = (e) => {
+    const v = Number(e.target.value);
+    state.sensorThreshold = v;
+    ls.set(LS_THRESHOLD, String(v));
+    const label = document.getElementById("sens-threshold-label");
+    if (label) label.textContent = "Порог: " + v;
+    const marker = document.getElementById("meter-threshold");
+    if (marker) {
+      // 150 — визуальный максимум шкалы
+      marker.style.left = Math.min(100, (v / 150) * 100) + "%";
+    }
+  };
+
+  panel.appendChild(slider);
+
+  const label = h("div", { class: "sens-value", id: "sens-threshold-label" },
+    "Порог: " + state.sensorThreshold);
+  panel.appendChild(label);
+
+  const resetBtn = h("button", {
+    class: "link",
+    style: "display: block; margin: 4px auto 0; font-size: 13px;"
+  }, "Сбросить на 45");
+  resetBtn.onclick = () => {
+    state.sensorThreshold = 45;
+    ls.set(LS_THRESHOLD, "45");
+    render();
+  };
+  panel.appendChild(resetBtn);
+
+  /* -------- Живая шкала -------- */
+  const meterWrap = h("div", { class: "meter-wrap" });
+  meterWrap.appendChild(h("div", { class: "meter-label" },
+    h("span", {}, "Текущая тряска"),
+    h("span", { id: "meter-number" }, "0")
+  ));
+
+  const bar = h("div", { class: "meter-bar" });
+  const fill = h("div", { class: "meter-fill", id: "meter-fill" });
+  const marker = h("div", {
+    class: "meter-threshold",
+    id: "meter-threshold",
+    style: `left: ${Math.min(100, (state.sensorThreshold / 150) * 100)}%;`
+  });
+  bar.appendChild(fill);
+  bar.appendChild(marker);
+  meterWrap.appendChild(bar);
+
+  meterWrap.appendChild(h("div", {
+    style: "font-size: 11.5px; color: var(--text-dim); margin-top: 6px; text-align:center;"
+  }, "Потряси телефон — стрелка покажет текущую силу. Белая отметка — твой порог."));
+
+  panel.appendChild(meterWrap);
+  wrap.appendChild(panel);
+
+  /* -------- Подтабы -------- */
+  const hasFriends = (state.me.friends || []).length > 0;
+  const tabs = h("div", { class: "subtabs" },
+    subTabButton("add", "Добавить друзей"),
+    subTabButton("req", state.requests.length ? `Заявки (${state.requests.length})` : "Заявки"),
+    hasFriends ? subTabButton("friends", "Други") : null
+  );
+  wrap.appendChild(tabs);
+
+  if (state.sub === "add") wrap.appendChild(renderAddFriend());
+  else if (state.sub === "req") wrap.appendChild(renderRequests());
+  else if (state.sub === "friends") wrap.appendChild(renderFriends());
+
+  return wrap;
+}
+
+/* ---------- Форма входа/регистрации ---------- */
+function renderAuth() {
+  if (!state.authMode) {
+    const wrap = h("div", { class: "center" }, h("h2", { class: "tab-title" }, "Профиль"));
+    const login = h("button", { class: "primary" }, "Войти");
+    login.onclick = () => { state.authMode = "login"; render(); };
+    const reg = h("button", { class: "secondary" }, "Зарегистрироваться");
+    reg.onclick = () => { state.authMode = "register"; render(); };
+    wrap.appendChild(login);
+    wrap.appendChild(reg);
+    return wrap;
+  }
+
+  const isLogin = state.authMode === "login";
+  const wrap = h("div", { class: "center" });
+  wrap.appendChild(h("h2", {}, isLogin ? "Вход" : "Регистрация"));
+
+  const loginInput = h("input", { placeholder: "Логин", autocapitalize: "none", autocorrect: "off" });
+  const passInput = h("input", { placeholder: "Пароль", type: "password" });
+  const errBox = h("div", { class: "error" });
+
+  wrap.appendChild(loginInput);
+  wrap.appendChild(passInput);
+  wrap.appendChild(errBox);
+
+  const btn = h("button", { class: "primary" }, isLogin ? "Войти" : "Создать");
+  btn.onclick = async () => {
+    btn.disabled = true;
+    errBox.textContent = "";
+    if (isLogin) await doLogin(loginInput.value, passInput.value, (m) => errBox.textContent = m);
+    else await doRegister(loginInput.value, passInput.value, (m) => errBox.textContent = m);
+    btn.disabled = false;
+  };
+  wrap.appendChild(btn);
+
+  const back = h("button", { class: "link" }, "Назад");
+  back.onclick = () => { state.authMode = null; render(); };
+  wrap.appendChild(back);
+
+  return wrap;
+}
+
+/* ---------- Добавить друга ---------- */
+function renderAddFriend() {
+  const wrap = h("div", { class: "stack" });
+  const input = h("input", { placeholder: "Логин друга", autocapitalize: "none", autocorrect: "off" });
+  const msg = h("div", { class: "info" });
+  const btn = h("button", { class: "primary" }, "Добавить");
+  btn.onclick = async () => {
+    btn.disabled = true;
+    msg.textContent = "";
+    await addFriend(input.value, (m) => { msg.textContent = m; });
+    btn.disabled = false;
+    input.value = "";
+  };
+  wrap.appendChild(input);
+  wrap.appendChild(btn);
+  wrap.appendChild(msg);
+  return wrap;
+}
+
+/* ---------- Заявки ---------- */
+function renderRequests() {
+  if (!state.requests.length) return h("div", { class: "muted" }, "Заявок пока нет");
+  const wrap = h("div", { class: "stack" });
+  state.requests.forEach((r) => {
+    const accept = h("button", { class: "accept" }, "✓ Принять");
+    accept.onclick = () => acceptRequest(r.uid);
+    const decline = h("button", { class: "decline" }, "✕");
+    decline.onclick = () => declineRequest(r.uid);
+    wrap.appendChild(h("div", { class: "row" },
+      h("span", { class: "name" }, r.login),
+      h("div", { class: "row-actions" }, accept, decline)
+    ));
+  });
+  return wrap;
+}
+
+/* ---------- Друзья ---------- */
+function renderFriends() {
+  const uids = state.me.friends || [];
+  if (!uids.length) return h("div", { class: "muted" }, "Друзей нет");
+  const wrap = h("div", { class: "stack" });
+
+  (async () => {
+    for (const uid of uids) {
+      const s = await getDoc(doc(db, "users", uid));
+      if (!s.exists()) continue;
+      const login = s.data().login;
+      const trash = h("button", { class: "trash" }, "🗑");
+      trash.onclick = () => removeFriend(uid);
+      wrap.appendChild(h("div", { class: "row" },
+        h("span", { class: "name" }, login),
+        h("div", { class: "row-actions" }, trash)
+      ));
+    }
+  })();
+
+  return wrap;
+}
+
+/* ---------- Чат ---------- */
+function renderChat() {
+  const bg = h("div", { class: "modal-bg" });
+  bg.onclick = closeChat;
+
+  const modal = h("div", { class: "modal" });
+  modal.onclick = (e) => e.stopPropagation();
+
+  const finishBtn = h("button", { class: "danger" }, "Завершить");
+  finishBtn.onclick = finishChat;
+
+  const head = h("div", { class: "modal-head" },
+    h("span", {}, "💬 " + state.chatWith.login),
+    finishBtn
+  );
+  modal.appendChild(head);
+
+  const messages = h("div", { class: "messages" });
+  state.messages.forEach((m) => {
+    messages.appendChild(h("div", {
+      class: "bubble " + (m.from === state.me.uid ? "out" : "in")
+    }, m.plain));
+  });
+  modal.appendChild(messages);
+
+  const input = h("input", { placeholder: "Сообщение…" });
+  const send = h("button", {}, "➤");
+  const doSend = async () => {
+    const t = input.value;
+    input.value = "";
+    await sendMessage(t);
+  };
+  send.onclick = doSend;
+  input.onkeydown = (e) => { if (e.key === "Enter") doSend(); };
+
+  modal.appendChild(h("div", { class: "composer" }, input, send));
+  bg.appendChild(modal);
+  return bg;
+}
+
+/* ============ СТАРТ ============ */
+(async function init() {
+  if (state.sensorEnabled) await ensureSensorListener();
+
+  const uid = ls.get(LS_UID);
+  if (uid) {
+    try {
+      const s = await getDoc(doc(db, "users", uid));
+      if (s.exists()) {
+        state.ready = true;
+        await loginByUid(uid);
+      } else {
+        ls.del(LS_UID);
+      }
+    } catch (e) {
+      console.warn("init error:", e);
+    }
+  }
+  state.ready = true;
+  render();
+})();
+</script>
+</body>
+</html>
